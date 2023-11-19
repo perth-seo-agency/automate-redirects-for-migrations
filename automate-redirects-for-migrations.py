@@ -1,5 +1,5 @@
 # redirect_matchmaker_streamlit.py
-
+import sentence-transformers
 import streamlit as st
 import pandas as pd
 from sentence_transformers import SentenceTransformer
