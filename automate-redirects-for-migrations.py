@@ -7,7 +7,7 @@ import numpy as np
 import faiss
 
 # Title
-st.title("Automated Redirect Matchmaker v3.0.2")
+st.title("Automated Redirect Matchmaker v3.0.3")
 
 # File upload
 uploaded_origin = st.file_uploader("Upload origin.csv", type="csv")
@@ -92,11 +92,14 @@ def main():
         if st.button("Match URLs"):
             try:
                 with st.spinner('Processing...'):
+                    # Clone the origin_df for similarity matching
+                    similarity_origin_df = origin_df.copy()
+
                     # Find exact matches first
                     origin_df, exact_matches_df = find_exact_matches(origin_df, destination_df, exact_match_columns)
 
                     # Process and match URLs based on similarity for non-exact matches
-                    similarity_matches_df = process_and_match(origin_df, destination_df, selected_similarity_columns)
+                    similarity_matches_df = process_and_match(similarity_origin_df, destination_df, selected_similarity_columns)
 
                     # Combine exact and similarity-based matches
                     final_matches_df = pd.concat([exact_matches_df, similarity_matches_df])
