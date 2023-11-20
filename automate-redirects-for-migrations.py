@@ -7,7 +7,7 @@ import numpy as np
 import faiss
 
 # Title
-st.title("Automated Redirect Matchmaker v3.0.1")
+st.title("Automated Redirect Matchmaker v3.0.2")
 
 # File upload
 uploaded_origin = st.file_uploader("Upload origin.csv", type="csv")
@@ -24,8 +24,8 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns):
         raise ValueError("Selected columns do not exist in both origin and destination dataframes.")
 
     # Combine selected columns into a single text column for vectorization
-    origin_df['combined_text'] = origin_df[valid_columns].fillna('').astype(str).apply(lambda x: ' '.join(x), axis=1)
-    destination_df['combined_text'] = destination_df[valid_columns].fillna('').astype(str).apply(lambda x: ' '.join(x), axis=1)
+    origin_df['combined_text'] = origin_df[valid_columns].fillna('').astype(str).apply(' '.join, axis=1)
+    destination_df['combined_text'] = destination_df[valid_columns].fillna('').astype(str).apply(' '.join, axis=1)
 
     # Use a pre-trained model for embedding
     model = SentenceTransformer('all-MiniLM-L6-v2')
