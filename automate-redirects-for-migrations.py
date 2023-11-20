@@ -7,7 +7,7 @@ import numpy as np
 import faiss
 
 # Title
-st.title("Automated Redirect Matchmaker")
+st.title("Automated Redirect Matchmaker v3")
 
 # File upload
 uploaded_origin = st.file_uploader("Upload origin.csv", type="csv")
