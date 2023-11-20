@@ -13,10 +13,11 @@ st.title("Automated Redirect Matchmaker")
 uploaded_origin = st.file_uploader("Upload origin.csv", type="csv")
 uploaded_destination = st.file_uploader("Upload destination.csv", type="csv")
 
-def process_and_match(origin_df, destination_df, selected_columns):
+# Function to process and match URLs based on similarity
+def process_and_match(origin_df, destination_df, selected_similarity_columns):
     # Combine selected columns into a single text column for vectorization
-    origin_df['combined_text'] = origin_df[selected_columns].fillna('').apply(lambda x: ' '.join(x), axis=1)
-    destination_df['combined_text'] = destination_df[selected_columns].fillna('').apply(lambda x: ' '.join(x), axis=1)
+    origin_df['combined_text'] = origin_df[selected_similarity_columns].fillna('').apply(lambda x: ' '.join(x), axis=1)
+    destination_df['combined_text'] = destination_df[selected_similarity_columns].fillna('').apply(lambda x: ' '.join(x), axis=1)
 
     # Use a pre-trained model for embedding
     model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -25,33 +26,43 @@ def process_and_match(origin_df, destination_df, selected_columns):
     origin_embeddings = model.encode(origin_df['combined_text'].tolist(), show_progress_bar=True)
     destination_embeddings = model.encode(destination_df['combined_text'].tolist(), show_progress_bar=True)
 
-    # Create a FAISS index
+    # Normalize embeddings to unit length for cosine similarity
+    origin_embeddings = origin_embeddings / np.linalg.norm(origin_embeddings, axis=1, keepdims=True)
+    destination_embeddings = destination_embeddings / np.linalg.norm(destination_embeddings, axis=1, keepdims=True)
+
+    # Create a FAISS index for Inner Product (cosine similarity)
     dimension = origin_embeddings.shape[1]  # The dimension of vectors
-    faiss_index = faiss.IndexFlatL2(dimension)  # Using L2 distance for similarity
+    faiss_index = faiss.IndexFlatIP(dimension)  # Inner Product for cosine similarity
     faiss_index.add(destination_embeddings.astype('float32'))  # Add destination vectors to the index
 
     # Perform the search for the nearest neighbors
     D, I = faiss_index.search(origin_embeddings.astype('float32'), k=1)  # k=1 finds the closest match
 
-    # Identify exact matches (where distance is 0)
-    exact_matches = D.flatten() == 0
-
-    # Calculate similarity score (1 - normalized distance)
-    # We normalize the distances only for non-exact matches
-    max_distance = np.max(D[~exact_matches]) if np.max(D[~exact_matches]) > 0 else 1
-    similarity_scores = 1 - (D / max_distance)
-
-    # Set similarity score for exact matches to 1
-    similarity_scores[exact_matches] = 1
+    # Convert distances to similarity scores (1 - distance for L2, direct output for IP)
+    similarity_scores = D.flatten()
 
     # Create the output DataFrame
     matches_df = pd.DataFrame({
         'origin_url': origin_df['Address'],
         'matched_url': destination_df['Address'].iloc[I.flatten()].values,
-        'similarity_score': np.round(similarity_scores.flatten(), 4)  # Rounded for better readability
+        'similarity_score': np.round(similarity_scores, 4)  # Rounded for better readability
     })
 
     return matches_df
+
+# Function to find exact matches based on user-selected columns
+def find_exact_matches(origin_df, destination_df, exact_match_columns):
+    exact_matches_df = pd.DataFrame(columns=['origin_url', 'matched_url', 'similarity_score'])
+    for col in exact_match_columns:
+        matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
+        for _, row in matched_rows.iterrows():
+            exact_matches_df = exact_matches_df.append({
+                'origin_url': row['Address'],
+                'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
+                'similarity_score': 1.0
+            }, ignore_index=True)
+        origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
+    return origin_df, exact_matches_df
 
 # Main function to control the flow
 def main():
@@ -60,20 +71,31 @@ def main():
         origin_df = pd.read_csv(uploaded_origin)
         destination_df = pd.read_csv(uploaded_destination)
 
-        # Column selection
+        # Exact match column selection
+        st.write("Select columns for exact match pairing:")
+        exact_match_columns = st.multiselect('Exact Match Columns', options=list(origin_df.columns))
+
+        # Similarity match column selection
         st.write("Select the columns you want to include for similarity matching:")
-        selected_columns = st.multiselect('Columns', options=list(origin_df.columns.intersection(destination_df.columns)))
+        selected_similarity_columns = st.multiselect('Similarity Match Columns', options=list(origin_df.columns))
 
         if st.button("Match URLs"):
             with st.spinner('Processing...'):
-                # Process and match URLs
-                matches_df = process_and_match(origin_df, destination_df, selected_columns)
-                st.write(matches_df)
+                # Find exact matches first
+                origin_df, exact_matches_df = find_exact_matches(origin_df, destination_df, exact_match_columns)
+
+                # Process and match URLs based on similarity for non-exact matches
+                similarity_matches_df = process_and_match(origin_df, destination_df, selected_similarity_columns)
+
+                # Combine exact and similarity-based matches
+                final_matches_df = pd.concat([exact_matches_df, similarity_matches_df])
+
+                st.write(final_matches_df)
 
                 # Download link for the matches
                 st.download_button(
                     label="Download Matches as CSV",
-                    data=matches_df.to_csv(index=False).encode('utf-8'),
+                    data=final_matches_df.to_csv(index=False).encode('utf-8'),
                     file_name='matched_urls.csv',
                     mime='text/csv',
                 )
