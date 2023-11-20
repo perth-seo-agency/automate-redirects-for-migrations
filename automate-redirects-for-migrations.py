@@ -52,16 +52,18 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns):
 
 # Function to find exact matches based on user-selected columns
 def find_exact_matches(origin_df, destination_df, exact_match_columns):
-    exact_matches_df = pd.DataFrame(columns=['origin_url', 'matched_url', 'similarity_score'])
+    exact_matches_list = []
     for col in exact_match_columns:
         matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
         for _, row in matched_rows.iterrows():
-            exact_matches_df = exact_matches_df.append({
+            exact_matches_list.append({
                 'origin_url': row['Address'],
                 'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
                 'similarity_score': 1.0
-            }, ignore_index=True)
+            })
         origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
+
+    exact_matches_df = pd.DataFrame(exact_matches_list)
     return origin_df, exact_matches_df
 
 # Main function to control the flow
