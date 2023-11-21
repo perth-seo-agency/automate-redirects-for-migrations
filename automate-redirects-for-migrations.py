@@ -36,7 +36,7 @@ def process_files(origin_df, destination_df):
     return pd.DataFrame(results)
 
 # Streamlit interface
-st.title("Automated Redirect Matching for Site Migrations")
+# st.title("Automated Redirect Matching for Site Migrations")
 
 # File upload
 st.sidebar.title("Upload Files")
