@@ -11,7 +11,7 @@ logger = setup_logger()
 logger.info("Main script started.")
 
 # Title
-st.title("Automated Redirect Matchmaker v4.0.01")
+st.title("Automated Redirect Matchmaker v4.0.2")
 
 # File upload
 uploaded_origin = st.file_uploader("Upload origin.csv", type="csv")
@@ -46,12 +46,12 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
    destination_embeddings = destination_embeddings / np.linalg.norm(destination_embeddings, axis=1, keepdims=True)
 
    # Create a FAISS index for Inner Product (cosine similarity)
-   dimension = origin_embeddings.shape[1] # The dimension of vectors
-   faiss_index = faiss.IndexFlatIP(dimension) # Inner Product for cosine similarity
-   faiss_index.add(destination_embeddings.astype('float32')) # Add destination vectors to the index
+   dimension = origin_embeddings.shape[1]  # The dimension of vectors
+   faiss_index = faiss.IndexFlatIP(dimension)  # Inner Product for cosine similarity
+   faiss_index.add(destination_embeddings.astype('float32'))  # Add destination vectors to the index
 
    # Perform the search for the nearest neighbors
-   D, I = faiss_index.search(origin_embeddings.astype('float32'), k=1) # k=1 finds the closest match
+   D, I = faiss_index.search(origin_embeddings.astype('float32'), k=1)  # k=1 finds the closest match
 
    # Convert distances to similarity scores (1 - distance for L2, direct output for IP)
    similarity_scores = D.flatten()
@@ -60,28 +60,41 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
    matches_df = pd.DataFrame({
        'origin_url': origin_df['Address'],
        'matched_url': destination_df['Address'].iloc[I.flatten()].values,
-       'similarity_score': np.round(similarity_scores, 4) # Rounded for better readability
+       'similarity_score': np.round(similarity_scores, 4)  # Rounded for better readability
    })
 
    return matches_df
 
+
 # Function to find exact matches based on user-selected columns
 def find_exact_matches(origin_df, destination_df, exact_match_columns):
    exact_matches_list = []
-   exact_matched_urls = [] # List to store URLs that were matched exactly
+   exact_matched_urls = []  # List to store URLs that were matched exactly
    for col in exact_match_columns:
-       matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
-       for _, row in matched_rows.iterrows():
-           exact_matched_urls.append(row['Address']) # Add the URL to the list of matched URLs
-           exact_matches_list.append({
-               'origin_url': row['Address'],
-               'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
-               'similarity_score': 1.0
-           })
-   origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
+       if col == 'Address':  # Handle Address column separately
+           matched_rows = origin_df[origin_df[col] == destination_df[col]]
+           for _, row in matched_rows.iterrows():
+               exact_matched_urls.append(row['Address'])  # Add the URL to the list of matched URLs
+               exact_matches_list.append({
+                   'origin_url': row['Address'],
+                   'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
+                   'similarity_score': 1.0
+               })
+           origin_df = origin_df[origin_df[col] != destination_df[col]]
+       else:
+           matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
+           for _, row in matched_rows.iterrows():
+               exact_matched_urls.append(row['Address'])  # Add the URL to the list of matched URLs
+               exact_matches_list.append({
+                   'origin_url': row['Address'],
+                   'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
+                   'similarity_score': 1.0
+               })
+           origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
 
    exact_matches_df = pd.DataFrame(exact_matches_list)
    return origin_df, exact_matches_df, exact_matched_urls
+
 
 # Main function to control the flow
 def main():
@@ -102,10 +115,12 @@ def main():
            try:
                with st.spinner('Processing...'):
                    # Find exact matches first
-                   origin_df, exact_matches_df, exact_matched_urls = find_exact_matches(origin_df, destination_df, exact_match_columns)
+                   origin_df, exact_matches_df, exact_matched_urls = find_exact_matches(origin_df, destination_df,
+                                                                                     exact_match_columns)
 
                    # Process and match URLs based on similarity for non-exact matches
-                   similarity_matches_df = process_and_match(origin_df, destination_df, selected_similarity_columns, exact_matched_urls)
+                   similarity_matches_df = process_and_match(origin_df, destination_df, selected_similarity_columns,
+                                                             exact_matched_urls)
 
                    # Combine exact and similarity-based matches
                    final_matches_df = pd.concat([exact_matches_df, similarity_matches_df])
@@ -134,6 +149,7 @@ def main():
                    )
            except ValueError as e:
                st.error(f"Error: {e}")
+
 
 if __name__ == "__main__":
    main()
