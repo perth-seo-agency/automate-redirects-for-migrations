@@ -27,8 +27,8 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
 
     origin_df = origin_df[~origin_df['Address'].isin(excluded_urls)]
 
-    origin_df['combined_text'] = origin_df[valid_columns].fillna('').astype(str).apply(' '.join, axis=1)
-    destination_df['combined_text'] = destination_df[valid_columns].fillna('').astype(str).apply(' '.join, axis=1)
+    origin_df['combined_text'] = origin_df[valid_columns].apply(lambda x: ' '.join(x.astype(str)), axis=1)
+    destination_df['combined_text'] = destination_df[valid_columns].apply(lambda x: ' '.join(x.astype(str)), axis=1)
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
 
@@ -48,7 +48,7 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
 
     matches_df = pd.DataFrame({
         'origin_url': origin_df['Address'],
-        'matched_url': destination_df['Address'].iloc[I.flatten()].values,
+        'matched_url': destination_df.iloc[I.flatten()]['Address'].values,
         'similarity_score': np.round(similarity_scores, 4)
     })
 
@@ -62,7 +62,7 @@ def find_exact_matches(origin_df, destination_df, exact_match_columns):
     exact_matched_urls = []
     for col in exact_match_columns:
         if col == 'Address':
-            matched_rows = origin_df[origin_df[col] == destination_df[col]]
+            matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
             for _, row in matched_rows.iterrows():
                 exact_matched_urls.append(row['Address'])
                 exact_matches_list.append({
@@ -70,7 +70,7 @@ def find_exact_matches(origin_df, destination_df, exact_match_columns):
                     'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
                     'similarity_score': 1.0
                 })
-            origin_df = origin_df[origin_df[col] != destination_df[col]]
+            origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
         else:
             matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
             for _, row in matched_rows.iterrows():
