@@ -48,7 +48,7 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
 
     matches_df = pd.DataFrame({
         'origin_url': origin_df['Address'],
-        'matched_url': destination_df.iloc[I.flatten()]['Address'].values,
+        'matched_url': destination_df['Address'].iloc[I.flatten()].values,
         'similarity_score': np.round(similarity_scores, 4)
     })
 
@@ -65,21 +65,25 @@ def find_exact_matches(origin_df, destination_df, exact_match_columns):
             matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
             for _, row in matched_rows.iterrows():
                 exact_matched_urls.append(row['Address'])
-                exact_matches_list.append({
-                    'origin_url': row['Address'],
-                    'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
-                    'similarity_score': 1.0
-                })
+                matched_url = destination_df.loc[destination_df[col] == row[col], 'Address'].values
+                if len(matched_url) > 0:
+                    exact_matches_list.append({
+                        'origin_url': row['Address'],
+                        'matched_url': matched_url[0],
+                        'similarity_score': 1.0
+                    })
             origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
         else:
             matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
             for _, row in matched_rows.iterrows():
                 exact_matched_urls.append(row['Address'])
-                exact_matches_list.append({
-                    'origin_url': row['Address'],
-                    'matched_url': destination_df[destination_df[col] == row[col]].iloc[0]['Address'],
-                    'similarity_score': 1.0
-                })
+                matched_url = destination_df.loc[destination_df[col] == row[col], 'Address'].values
+                if len(matched_url) > 0:
+                    exact_matches_list.append({
+                        'origin_url': row['Address'],
+                        'matched_url': matched_url[0],
+                        'similarity_score': 1.0
+                    })
             origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
 
     exact_matches_df = pd.DataFrame(exact_matches_list)
@@ -149,4 +153,4 @@ def main():
             logger.error(f"Error: {str(e)}")
 
 if __name__ == "__main__":
-    main() 
+    main()
