@@ -40,23 +40,26 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
     if len(destination_embeddings) > 0:
         destination_embeddings = destination_embeddings / np.linalg.norm(destination_embeddings, axis=1, keepdims=True)
 
-    dimension = origin_embeddings.shape[1]
-    faiss_index = faiss.IndexFlatIP(dimension)
-    faiss_index.add(destination_embeddings.astype('float32'))
+    if len(origin_embeddings) > 0 and len(destination_embeddings) > 0:
+        dimension = origin_embeddings.shape[1]
+        faiss_index = faiss.IndexFlatIP(dimension)
+        faiss_index.add(destination_embeddings.astype('float32'))
 
-    D, I = faiss_index.search(origin_embeddings.astype('float32'), k=1)
+        D, I = faiss_index.search(origin_embeddings.astype('float32'), k=1)
 
-    similarity_scores = D.flatten()
+        similarity_scores = D.flatten()
 
-    matches_df = pd.DataFrame({
-        'origin_url': origin_df['Address'],
-        'matched_url': destination_df['Address'].iloc[I.flatten()].values,
-        'similarity_score': np.round(similarity_scores, 4)
-    })
+        matches_df = pd.DataFrame({
+            'origin_url': origin_df['Address'],
+            'matched_url': destination_df['Address'].iloc[I.flatten()].values,
+            'similarity_score': np.round(similarity_scores, 4)
+        })
 
-    matches_df = matches_df[matches_df['similarity_score'] >= similarity_threshold]
+        matches_df = matches_df[matches_df['similarity_score'] >= similarity_threshold]
 
-    return matches_df
+        return matches_df
+    else:
+        return pd.DataFrame()
 
 @logging_decorator
 def find_exact_matches(origin_df, destination_df, exact_match_columns):
