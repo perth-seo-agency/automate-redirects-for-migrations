@@ -27,8 +27,8 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
 
     origin_df = origin_df[~origin_df['Address'].isin(excluded_urls)]
 
-    origin_df['combined_text'] = origin_df[valid_columns].astype(str).apply(' '.join, axis=1)
-    destination_df['combined_text'] = destination_df[valid_columns].astype(str).apply(' '.join, axis=1)
+    origin_df['combined_text'] = origin_df[valid_columns].apply(lambda x: ' '.join(x.astype(str)), axis=1)
+    destination_df['combined_text'] = destination_df[valid_columns].apply(lambda x: ' '.join(x.astype(str)), axis=1)
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
 
