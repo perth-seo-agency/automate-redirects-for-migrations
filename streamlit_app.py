@@ -35,8 +35,10 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
     origin_embeddings = model.encode(origin_df['combined_text'].tolist(), show_progress_bar=True)
     destination_embeddings = model.encode(destination_df['combined_text'].tolist(), show_progress_bar=True)
 
-    origin_embeddings = origin_embeddings / np.linalg.norm(origin_embeddings, axis=1, keepdims=True)
-    destination_embeddings = destination_embeddings / np.linalg.norm(destination_embeddings, axis=1, keepdims=True)
+    if len(origin_embeddings) > 0:
+        origin_embeddings = origin_embeddings / np.linalg.norm(origin_embeddings, axis=1, keepdims=True)
+    if len(destination_embeddings) > 0:
+        destination_embeddings = destination_embeddings / np.linalg.norm(destination_embeddings, axis=1, keepdims=True)
 
     dimension = origin_embeddings.shape[1]
     faiss_index = faiss.IndexFlatIP(dimension)
