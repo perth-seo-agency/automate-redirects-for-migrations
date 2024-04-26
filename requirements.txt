@@ -1,4 +1,5 @@
 streamlit
 pandas
 sentence-transformers
-faiss-cpu  # or faiss-gpu, depending on your needs
+numpy
+faiss-cpu
