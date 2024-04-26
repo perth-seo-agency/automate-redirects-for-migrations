@@ -27,8 +27,8 @@ def process_and_match(origin_df, destination_df, selected_similarity_columns, ex
 
     origin_df = origin_df[~origin_df['Address'].isin(excluded_urls)]
 
-    origin_df['combined_text'] = origin_df[valid_columns].apply(lambda x: ' '.join(x.astype(str)), axis=1)
-    destination_df['combined_text'] = destination_df[valid_columns].apply(lambda x: ' '.join(x.astype(str)), axis=1)
+    origin_df['combined_text'] = origin_df[valid_columns].astype(str).apply(' '.join, axis=1)
+    destination_df['combined_text'] = destination_df[valid_columns].astype(str).apply(' '.join, axis=1)
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
 
@@ -61,30 +61,17 @@ def find_exact_matches(origin_df, destination_df, exact_match_columns):
     exact_matches_list = []
     exact_matched_urls = []
     for col in exact_match_columns:
-        if col == 'Address':
-            matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
-            for _, row in matched_rows.iterrows():
-                exact_matched_urls.append(row['Address'])
-                matched_url = destination_df.loc[destination_df[col] == row[col], 'Address'].values
-                if len(matched_url) > 0:
-                    exact_matches_list.append({
-                        'origin_url': row['Address'],
-                        'matched_url': matched_url[0],
-                        'similarity_score': 1.0
-                    })
-            origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
-        else:
-            matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
-            for _, row in matched_rows.iterrows():
-                exact_matched_urls.append(row['Address'])
-                matched_url = destination_df.loc[destination_df[col] == row[col], 'Address'].values
-                if len(matched_url) > 0:
-                    exact_matches_list.append({
-                        'origin_url': row['Address'],
-                        'matched_url': matched_url[0],
-                        'similarity_score': 1.0
-                    })
-            origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
+        matched_rows = origin_df[origin_df[col].isin(destination_df[col])]
+        for _, row in matched_rows.iterrows():
+            exact_matched_urls.append(row['Address'])
+            matched_url = destination_df.loc[destination_df[col] == row[col], 'Address'].values
+            if len(matched_url) > 0:
+                exact_matches_list.append({
+                    'origin_url': row['Address'],
+                    'matched_url': matched_url[0],
+                    'similarity_score': 1.0
+                })
+        origin_df = origin_df[~origin_df[col].isin(destination_df[col])]
 
     exact_matches_df = pd.DataFrame(exact_matches_list)
     return origin_df, exact_matches_df, exact_matched_urls
