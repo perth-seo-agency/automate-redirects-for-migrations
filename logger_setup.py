@@ -1,6 +1,5 @@
 import logging
 import os
-import sys  # Import sys module
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 import traceback
@@ -10,7 +9,7 @@ def log_exception(exc_type, exc_value, exc_traceback):
     """
     Log exception with traceback.
     """
-    logger.error("Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback))
+    logging.error("Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 def logging_decorator(func):
     """
@@ -18,14 +17,14 @@ def logging_decorator(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        logger.info(f"Entering: {func.__name__}")
+        logging.info(f"Entering: {func.__name__}")
         try:
             result = func(*args, **kwargs)
-            logger.info(f"Exiting: {func.__name__}")
+            logging.info(f"Exiting: {func.__name__}")
             return result
         except Exception as e:
-            logger.error(f"Exception in {func.__name__}: {str(e)}")
-            logger.error(traceback.format_exc())
+            logging.error(f"Exception in {func.__name__}: {str(e)}")
+            logging.error(traceback.format_exc())
             raise
     return wrapper
 
@@ -53,11 +52,6 @@ def setup_logger(log_level=logging.DEBUG):
     logger.addHandler(console_handler)
 
     logging.getLogger().addHandler(logging.StreamHandler())
-    sys.excepthook = log_exception
+    logging.excepthook = log_exception
 
     return logger
-
-# Example usage
-if __name__ == "__main__":
-    logger = setup_logger()
-    logger.info("Logging setup complete.")
